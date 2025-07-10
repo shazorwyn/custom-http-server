@@ -1,4 +1,5 @@
 #include "server.hpp"
+
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
@@ -6,6 +7,7 @@
 #include <sys/socket.h>
 #include <sstream>
 #include <string>
+#include <thread>
 
 HttpServer::HttpServer(int port) : port(port), server_fd(-1) {}
 
@@ -44,7 +46,73 @@ void HttpServer::setupSocket()
 
     std::cout << "✅ Listening on port " << port << std::endl;
 }
+void handleClient(int client_socket, const std::string &request)
+{
+    // Parse request line
+    std::istringstream requestStream(request);
+    std::string method, path, version;
+    requestStream >> method >> path >> version;
 
+    // Simple response handling
+    std::string response;
+
+    if (method == "GET")
+    {
+        if (path == "/")
+        {
+            response = "HTTP/1.1 200 OK\r\n\r\n";
+        }
+        else if (path.rfind("/echo/", 0) == 0)
+        {                                         // path starts with /echo/
+            std::string to_echo = path.substr(6); // everything after /echo/
+            response =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: " +
+                std::to_string(to_echo.size()) + "\r\n"
+                                                 "\r\n" +
+                to_echo;
+        }
+        else if (path == "/user-agent")
+        {
+            std::string user_agent;
+            std::istringstream req_lines(request);
+            std::string line;
+            while (std::getline(req_lines, line))
+            {
+                if (!line.empty() && line.back() == '\r')
+                    line.pop_back(); // Remove trailing \r
+                if (line.find("User-Agent:") == 0 || line.find("user-agent:") == 0)
+                {
+                    // size_t colon_pos = line.find(":");
+                    // if (colon_pos != std::string::npos)
+                    user_agent = line.substr(line.find(":") + 2); // Extract User-Agent value
+                    break;
+                }
+            }
+            response =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: " +
+                std::to_string(user_agent.size()) + "\r\n"
+                                                    "\r\n" +
+                user_agent;
+        }
+        else
+        {
+            response = "HTTP/1.1 404 Not Found\r\n\r\n";
+        }
+    }
+    else
+    {
+        response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
+    }
+    std::cout << "Response:\n"
+              << response << std::endl;
+
+    send(client_socket, response.c_str(), response.size(), 0);
+    close(client_socket);
+}
 void HttpServer::start()
 {
     setupSocket();
@@ -71,75 +139,14 @@ void HttpServer::start()
             continue;
         }
 
-        // Print the request
         std::string request(buffer);
-        std::cout << "Request:\n"
-                  << request << std::endl;
 
-        // Parse request line
-        std::istringstream requestStream(request);
-        std::string method, path, version;
-        requestStream >> method >> path >> version;
+        // Print the request
+        // std::cout << "Request:\n"
+        //           << request << std::endl;
 
-        // Simple response handling
-        std::string response;
-
-        if (method == "GET")
-        {
-            if (path == "/")
-            {
-                response = "HTTP/1.1 200 OK\r\n\r\n";
-            }
-            else if (path.rfind("/echo/", 0) == 0)
-            {                                         // path starts with /echo/
-                std::string to_echo = path.substr(6); // everything after /echo/
-                response =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Content-Length: " +
-                    std::to_string(to_echo.size()) + "\r\n"
-                                                     "\r\n" +
-                    to_echo;
-            }
-            else if (path == "/user-agent")
-            {
-                std::string user_agent;
-                std::istringstream req_lines(request);
-                std::string line;
-                while (std::getline(req_lines, line))
-                {
-                    if (!line.empty() && line.back() == '\r')
-                        line.pop_back(); // Remove trailing \r
-                    if (line.find("User-Agent:") == 0 || line.find("user-agent:") == 0)
-                    {
-                        // size_t colon_pos = line.find(":");
-                        // if (colon_pos != std::string::npos)
-                        user_agent = line.substr(line.find(":") + 2); // Extract User-Agent value
-                        break;
-                    }
-                }
-                response =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Content-Length: " +
-                    std::to_string(user_agent.size()) + "\r\n"
-                                                        "\r\n" +
-                    user_agent;
-            }
-            else
-            {
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
-            }
-        }
-        else
-        {
-            response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
-        }
-        std::cout << "Response:\n"
-                  << response << std::endl;
-
-        send(client_socket, response.c_str(), response.size(), 0);
-        close(client_socket);
+        // handle each connection in a new thread
+        std::thread(handleClient, client_socket, request).detach(); // Detach the thread to allow it to run independently
     }
 
     close(server_fd);
