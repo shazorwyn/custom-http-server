@@ -4,6 +4,8 @@
 #include <cstring>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sstream>
+#include <string>
 
 HttpServer::HttpServer(int port) : port(port), server_fd(-1) {}
 
@@ -42,30 +44,45 @@ void HttpServer::start() {
     setupSocket();
 
     while (true) {
+        // Accept a new connection
         sockaddr_in client_addr{};
         socklen_t addr_len = sizeof(client_addr);
+        // Wait for a client to connect
         int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &addr_len);
         if (client_socket < 0) {
             perror("Accept failed");
             continue;
         }
 
-        // --- Step: Read request (not parsing yet) ---
+        // Handle the client request
         char buffer[1024] = {0};
-        read(client_socket, buffer, sizeof(buffer));
-        std::cout << "📥 Received request:\n" << buffer << std::endl;
+        ssize_t bytesRead = read(client_socket, buffer, sizeof(buffer));
+        if (bytesRead <= 0) {
+            close(client_socket);
+            continue;
+        }
 
-        // --- Step: Send 200 OK response ---
-        std::string body = "Hello from C++ HTTP Server!";
-        std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/plain\r\n"
-            "Content-Length: " + std::to_string(body.size()) + "\r\n"
-            "\r\n" +
-            body;
+        // Print the request
+        std::string request(buffer);
+        std::cout << "Request:\n" << request << std::endl;
+
+        // Parse request line
+        std::istringstream requestStream(request);
+        std::string method, path, version;
+        requestStream >> method >> path >> version;
+
+        // Simple response handling
+        std::string response;
+
+        if (method == "GET" && path == "/") {
+            response = "HTTP/1.1 200 OK\r\n\r\n";
+        } else {
+            response = "HTTP/1.1 404 Not Found\r\n\r\n";
+        }
 
         send(client_socket, response.c_str(), response.size(), 0);
         close(client_socket);
+        
     }
 
     close(server_fd);

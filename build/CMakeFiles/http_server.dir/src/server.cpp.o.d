@@ -176,4 +176,5 @@ CMakeFiles/http_server.dir/src/server.cpp.o: \
  /usr/include/x86_64-linux-gnu/asm/sockios.h \
  /usr/include/asm-generic/sockios.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h \
- /usr/include/x86_64-linux-gnu/bits/in.h
+ /usr/include/x86_64-linux-gnu/bits/in.h /usr/include/c++/13/sstream \
+ /usr/include/c++/13/bits/sstream.tcc
