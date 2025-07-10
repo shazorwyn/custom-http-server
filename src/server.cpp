@@ -50,9 +50,34 @@ void HttpServer::setupSocket()
 void handleClient(int client_socket, const std::string &request, const std::string &directory)
 {
     // Parse request line
-    std::istringstream requestStream(request);
+    // std::istringstream requestStream(request);
+    // std::string method, path, version;
+    // requestStream >> method >> path >> version;
+
+    std::string header_part, body_part;
+    size_t header_end = request.find("\r\n\r\n");
+    if (header_end != std::string::npos)
+    {
+        header_part = request.substr(0, header_end);
+        body_part = request.substr(header_end + 4); // body starts after \r\n\r\n
+    }
+    std::istringstream header_stream(header_part);
     std::string method, path, version;
-    requestStream >> method >> path >> version;
+    header_stream >> method >> path >> version;
+
+    std::string line;
+    int content_length = 0;
+
+    while (std::getline(header_stream, line))
+    {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+
+        if (line.find("Content-Length:") == 0 || line.find("content-length:") == 0)
+        {
+            content_length = std::stoi(line.substr(line.find(":") + 1));
+        }
+    }
 
     // Simple response handling
     std::string response;
@@ -102,6 +127,13 @@ void handleClient(int client_socket, const std::string &request, const std::stri
         else if (path.rfind("/files/", 0) == 0)
         {
             std::string file_path = path.substr(7); // gets everything after /files/
+            if (file_path.find("..") != std::string::npos)
+            {
+                response = "HTTP/1.1 403 Forbidden\r\n\r\n";
+                send(client_socket, response.c_str(), response.size(), 0);
+                close(client_socket);
+                return;
+            } // Prevent directory traversal attacks
 
             std::string full_path = directory + "/" + file_path;
             std::ifstream file(full_path, std::ios::binary);
@@ -120,12 +152,47 @@ void handleClient(int client_socket, const std::string &request, const std::stri
                                                           "\r\n" +
                     file_content;
             }
+            else
+            {
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
+            }
         }
         else
         {
             response = "HTTP/1.1 404 Not Found\r\n\r\n";
         }
     }
+    else if (method == "POST" && path.rfind("/files/", 0) == 0)
+    {
+        std::string filename = path.substr(7);
+        if (filename.find("..") != std::string::npos)
+        {
+            std::string response = "HTTP/1.1 403 Forbidden\r\n\r\n";
+            send(client_socket, response.c_str(), response.size(), 0);
+            close(client_socket);
+            return;
+        }
+
+        std::string full_path = directory + "/" + filename;
+
+        // Read body (we may have only part of it so far)
+        while ((int)body_part.size() < content_length)
+        {
+            char extra_buf[1024] = {0};
+            ssize_t bytes = read(client_socket, extra_buf, sizeof(extra_buf));
+            if (bytes <= 0)
+                break;
+            body_part.append(extra_buf, bytes);
+        }
+
+        // Write to file
+        std::ofstream outfile(full_path, std::ios::binary);
+        outfile.write(body_part.c_str(), content_length);
+        outfile.close();
+
+        response = "HTTP/1.1 201 Created\r\n\r\n";
+    }
+
     else
     {
         response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
@@ -169,6 +236,7 @@ void HttpServer::start()
         //           << request << std::endl;
 
         // handle each connection in a new thread
+
         std::thread(handleClient, client_socket, request, directory).detach(); // Detach the thread to allow it to run independently
     }
 
