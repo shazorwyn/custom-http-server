@@ -1,8 +1,7 @@
 CMakeFiles/http_server.dir/src/server.cpp.o: \
  /home/shazorwyn/cpp-http-server/src/server.cpp \
- /usr/include/stdc-predef.h \
- /home/shazorwyn/cpp-http-server/src/server.hpp \
- /usr/include/c++/13/iostream /usr/include/c++/13/bits/requires_hosted.h \
+ /usr/include/stdc-predef.h /usr/include/c++/13/iostream \
+ /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
  /usr/include/features.h /usr/include/features-time64.h \
@@ -186,4 +185,9 @@ CMakeFiles/http_server.dir/src/server.cpp.o: \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
  /usr/include/c++/13/limits /usr/include/c++/13/ctime \
- /usr/include/c++/13/bits/parse_numbers.h
+ /usr/include/c++/13/bits/parse_numbers.h /usr/include/c++/13/fstream \
+ /usr/include/c++/13/bits/codecvt.h \
+ /usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h \
+ /usr/include/x86_64-linux-gnu/c++/13/bits/c++io.h \
+ /usr/include/c++/13/bits/fstream.tcc \
+ /home/shazorwyn/cpp-http-server/src/server.hpp

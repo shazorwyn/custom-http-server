@@ -1,5 +1,3 @@
-#include "server.hpp"
-
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
@@ -8,8 +6,11 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <fstream>
 
-HttpServer::HttpServer(int port) : port(port), server_fd(-1) {}
+#include "server.hpp"
+
+HttpServer::HttpServer(int port, const std::string &directory) : port(port), server_fd(-1), directory(directory) {}
 
 void HttpServer::setupSocket()
 {
@@ -46,7 +47,7 @@ void HttpServer::setupSocket()
 
     std::cout << "✅ Listening on port " << port << std::endl;
 }
-void handleClient(int client_socket, const std::string &request)
+void handleClient(int client_socket, const std::string &request, const std::string &directory)
 {
     // Parse request line
     std::istringstream requestStream(request);
@@ -98,6 +99,28 @@ void handleClient(int client_socket, const std::string &request)
                                                     "\r\n" +
                 user_agent;
         }
+        else if (path.rfind("/files/", 0) == 0)
+        {
+            std::string file_path = path.substr(7); // gets everything after /files/
+
+            std::string full_path = directory + "/" + file_path;
+            std::ifstream file(full_path, std::ios::binary);
+
+            if (file)
+            {
+                std::ostringstream content_stream;
+                content_stream << file.rdbuf(); // read entire file
+                std::string file_content = content_stream.str();
+
+                response =
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/octet-stream\r\n"
+                    "Content-Length: " +
+                    std::to_string(file_content.size()) + "\r\n"
+                                                          "\r\n" +
+                    file_content;
+            }
+        }
         else
         {
             response = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -146,7 +169,7 @@ void HttpServer::start()
         //           << request << std::endl;
 
         // handle each connection in a new thread
-        std::thread(handleClient, client_socket, request).detach(); // Detach the thread to allow it to run independently
+        std::thread(handleClient, client_socket, request, directory).detach(); // Detach the thread to allow it to run independently
     }
 
     close(server_fd);

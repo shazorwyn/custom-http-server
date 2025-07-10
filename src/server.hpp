@@ -1,8 +1,11 @@
 #pragma once
 
-class HttpServer {
+#include <string>
+
+class HttpServer
+{
 public:
-    HttpServer(int port);
+    HttpServer(int port, const std::string &directory = ".");
     void start();
 
 private:
@@ -10,4 +13,5 @@ private:
     int port;
 
     void setupSocket();
+    std::string directory;
 };
