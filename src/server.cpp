@@ -74,11 +74,26 @@ void HttpServer::start() {
         // Simple response handling
         std::string response;
 
-        if (method == "GET" && path == "/") {
-            response = "HTTP/1.1 200 OK\r\n\r\n";
+        if (method == "GET") {
+            if (path == "/") {
+                response = "HTTP/1.1 200 OK\r\n\r\n";
+            }
+            else if (path.rfind("/echo/", 0) == 0) { // path starts with /echo/
+                std::string to_echo = path.substr(6); // everything after /echo/
+                response = 
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: text/plain\r\n"
+                    "Content-Length: " + std::to_string(to_echo.size()) + "\r\n"
+                    "\r\n" +
+                    to_echo;
+            }
+            else {
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
+            }
         } else {
-            response = "HTTP/1.1 404 Not Found\r\n\r\n";
+            response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
         }
+        std::cout << "Response:\n" << response << std::endl;    
 
         send(client_socket, response.c_str(), response.size(), 0);
         close(client_socket);
