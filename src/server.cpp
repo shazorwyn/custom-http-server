@@ -9,6 +9,9 @@
 #include <fstream>
 
 #include "server.hpp"
+#include "handler.cpp"
+#include "request.cpp"
+#include "response.cpp"
 
 HttpServer::HttpServer(int port, const std::string &directory) : port(port), server_fd(-1), directory(directory) {}
 
@@ -47,160 +50,29 @@ void HttpServer::setupSocket()
 
     std::cout << "✅ Listening on port " << port << std::endl;
 }
-void handleClient(int client_socket, const std::string &request, const std::string &directory)
+void handleClient(int client_socket, const std::string &raw_request, const std::string &directory)
 {
-    // Parse request line
-    // std::istringstream requestStream(request);
-    // std::string method, path, version;
-    // requestStream >> method >> path >> version;
+    HttpRequest req = HttpRequest::parse(raw_request);
 
-    std::string header_part, body_part;
-    size_t header_end = request.find("\r\n\r\n");
-    if (header_end != std::string::npos)
+    auto it = req.headers.find("Content-Length");
+    if (it != req.headers.end())
     {
-        header_part = request.substr(0, header_end);
-        body_part = request.substr(header_end + 4); // body starts after \r\n\r\n
-    }
-    std::istringstream header_stream(header_part);
-    std::string method, path, version;
-    header_stream >> method >> path >> version;
-
-    std::string line;
-    int content_length = 0;
-
-    while (std::getline(header_stream, line))
-    {
-        if (!line.empty() && line.back() == '\r')
-            line.pop_back();
-
-        if (line.find("Content-Length:") == 0 || line.find("content-length:") == 0)
+        int expected_length = std::stoi(it->second);
+        while ((int)req.body.size() < expected_length)
         {
-            content_length = std::stoi(line.substr(line.find(":") + 1));
-        }
-    }
-
-    // Simple response handling
-    std::string response;
-
-    if (method == "GET")
-    {
-        if (path == "/")
-        {
-            response = "HTTP/1.1 200 OK\r\n\r\n";
-        }
-        else if (path.rfind("/echo/", 0) == 0)
-        {                                         // path starts with /echo/
-            std::string to_echo = path.substr(6); // everything after /echo/
-            response =
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/plain\r\n"
-                "Content-Length: " +
-                std::to_string(to_echo.size()) + "\r\n"
-                                                 "\r\n" +
-                to_echo;
-        }
-        else if (path == "/user-agent")
-        {
-            std::string user_agent;
-            std::istringstream req_lines(request);
-            std::string line;
-            while (std::getline(req_lines, line))
-            {
-                if (!line.empty() && line.back() == '\r')
-                    line.pop_back(); // Remove trailing \r
-                if (line.find("User-Agent:") == 0 || line.find("user-agent:") == 0)
-                {
-                    // size_t colon_pos = line.find(":");
-                    // if (colon_pos != std::string::npos)
-                    user_agent = line.substr(line.find(":") + 2); // Extract User-Agent value
-                    break;
-                }
-            }
-            response =
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/plain\r\n"
-                "Content-Length: " +
-                std::to_string(user_agent.size()) + "\r\n"
-                                                    "\r\n" +
-                user_agent;
-        }
-        else if (path.rfind("/files/", 0) == 0)
-        {
-            std::string file_path = path.substr(7); // gets everything after /files/
-            if (file_path.find("..") != std::string::npos)
-            {
-                response = "HTTP/1.1 403 Forbidden\r\n\r\n";
-                send(client_socket, response.c_str(), response.size(), 0);
-                close(client_socket);
-                return;
-            } // Prevent directory traversal attacks
-
-            std::string full_path = directory + "/" + file_path;
-            std::ifstream file(full_path, std::ios::binary);
-
-            if (file)
-            {
-                std::ostringstream content_stream;
-                content_stream << file.rdbuf(); // read entire file
-                std::string file_content = content_stream.str();
-
-                response =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: application/octet-stream\r\n"
-                    "Content-Length: " +
-                    std::to_string(file_content.size()) + "\r\n"
-                                                          "\r\n" +
-                    file_content;
-            }
-            else
-            {
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
-            }
-        }
-        else
-        {
-            response = "HTTP/1.1 404 Not Found\r\n\r\n";
-        }
-    }
-    else if (method == "POST" && path.rfind("/files/", 0) == 0)
-    {
-        std::string filename = path.substr(7);
-        if (filename.find("..") != std::string::npos)
-        {
-            std::string response = "HTTP/1.1 403 Forbidden\r\n\r\n";
-            send(client_socket, response.c_str(), response.size(), 0);
-            close(client_socket);
-            return;
-        }
-
-        std::string full_path = directory + "/" + filename;
-
-        // Read body (we may have only part of it so far)
-        while ((int)body_part.size() < content_length)
-        {
-            char extra_buf[1024] = {0};
-            ssize_t bytes = read(client_socket, extra_buf, sizeof(extra_buf));
+            char buffer[1024];
+            ssize_t bytes = read(client_socket, buffer, sizeof(buffer));
             if (bytes <= 0)
                 break;
-            body_part.append(extra_buf, bytes);
+            req.body.append(buffer, bytes);
         }
-
-        // Write to file
-        std::ofstream outfile(full_path, std::ios::binary);
-        outfile.write(body_part.c_str(), content_length);
-        outfile.close();
-
-        response = "HTTP/1.1 201 Created\r\n\r\n";
     }
 
-    else
-    {
-        response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
-    }
-    std::cout << "Response:\n"
-              << response << std::endl;
+    HttpHandler handler(directory);
+    HttpResponse res = handler.handle(req);
 
-    send(client_socket, response.c_str(), response.size(), 0);
+    std::string response_str = res.toString();
+    send(client_socket, response_str.c_str(), response_str.size(), 0);
     close(client_socket);
 }
 void HttpServer::start()

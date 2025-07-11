@@ -190,4 +190,25 @@ CMakeFiles/http_server.dir/src/server.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++io.h \
  /usr/include/c++/13/bits/fstream.tcc \
- /home/shazorwyn/cpp-http-server/src/server.hpp
+ /home/shazorwyn/cpp-http-server/src/server.hpp \
+ /home/shazorwyn/cpp-http-server/src/handler.cpp \
+ /home/shazorwyn/cpp-http-server/src/handler.hpp \
+ /home/shazorwyn/cpp-http-server/src/request.hpp \
+ /usr/include/c++/13/unordered_map \
+ /usr/include/c++/13/bits/unordered_map.h \
+ /usr/include/c++/13/bits/hashtable.h \
+ /usr/include/c++/13/bits/hashtable_policy.h \
+ /usr/include/c++/13/ext/aligned_buffer.h \
+ /usr/include/c++/13/bits/enable_special_members.h \
+ /usr/include/c++/13/bits/node_handle.h \
+ /usr/include/c++/13/bits/erase_if.h \
+ /home/shazorwyn/cpp-http-server/src/response.hpp \
+ /home/shazorwyn/cpp-http-server/src/request.cpp \
+ /usr/include/c++/13/algorithm /usr/include/c++/13/bits/stl_algo.h \
+ /usr/include/c++/13/bits/algorithmfwd.h \
+ /usr/include/c++/13/bits/stl_heap.h \
+ /usr/include/c++/13/bits/uniform_int_dist.h \
+ /usr/include/c++/13/bits/stl_tempbuf.h \
+ /usr/include/c++/13/pstl/glue_algorithm_defs.h \
+ /usr/include/c++/13/pstl/execution_defs.h \
+ /home/shazorwyn/cpp-http-server/src/response.cpp
