@@ -1,6 +1,7 @@
-#include "handler.hpp"
 #include <fstream>
 #include <sstream>
+
+#include "handler.hpp"
 
 HttpHandler::HttpHandler(const std::string &directory) : directory(directory) {}
 

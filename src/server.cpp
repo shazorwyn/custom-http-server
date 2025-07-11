@@ -9,9 +9,9 @@
 #include <fstream>
 
 #include "server.hpp"
-#include "handler.cpp"
-#include "request.cpp"
-#include "response.cpp"
+#include "handler.hpp"
+#include "request.hpp"
+#include "response.hpp"
 
 HttpServer::HttpServer(int port, const std::string &directory) : port(port), server_fd(-1), directory(directory) {}
 
