@@ -3,6 +3,7 @@
 #include <string>
 #include "request.hpp"
 #include "response.hpp"
+#include "router.hpp"
 
 class HttpHandler
 {
@@ -13,7 +14,13 @@ public:
 
 private:
     std::string directory;
+    Router router;
 
-    HttpResponse handleGET(const HttpRequest &request);
-    HttpResponse handlePOST(const HttpRequest &request);
+    void setupRoutes();
+
+    HttpResponse rootHandler(const HttpRequest &request);
+    HttpResponse echoHandler(const HttpRequest &request);
+    HttpResponse userAgentHandler(const HttpRequest &request);
+    HttpResponse fileGetHandler(const HttpRequest &request);
+    HttpResponse filePostHandler(const HttpRequest &request);
 };
