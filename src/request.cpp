@@ -1,6 +1,21 @@
 #include "request.hpp"
+#include <vector>
 #include <sstream>
 #include <algorithm>
+
+std::vector<std::string> splitCommaSeparated(const std::string &value)
+{
+    std::vector<std::string> result;
+    std::istringstream ss(value);
+    std::string token;
+    while (std::getline(ss, token, ','))
+    {
+        token.erase(0, token.find_first_not_of(" \t"));
+        token.erase(token.find_last_not_of(" \t") + 1);
+        result.push_back(token);
+    }
+    return result;
+}
 
 HttpRequest HttpRequest::parse(const std::string &raw)
 {

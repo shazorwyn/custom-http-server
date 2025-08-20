@@ -10,6 +10,7 @@ public:
     std::string version;
     std::unordered_map<std::string, std::string> headers;
     std::string body;
+    const std::vector<std::string> ENCODING = {"gzip", "compress", "deflate", "br"};
 
     static HttpRequest parse(const std::string &raw);
 };
